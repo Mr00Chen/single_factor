@@ -59,11 +59,14 @@ score = max(0.25, min(1.00, score));
 grade = to_grade(score);
 fprintf('赋分范围     : %.3f ~ %.3f\n', min(score), max(score));
 
+% 数据宽/高比（X、Y 单位同为 m），用于按比例设定窗口尺寸
+ar = (xmax - xmin) / (ymax - ymin);
+
 figure('Name',[cfg.name '插值图'],'Color','w');
 contourf(Xg_km,Yg_km,Zg,30,'LineStyle','none');
 colorbar; colormap(gca,parula);
-axis equal tight;       % X/Y 单位长度相等，并贴紧数据范围
-pbaspect([1 1 1]);      % 强制绘图区为正方形（短轴方向自动留白居中）
+axis equal tight;            % X/Y 单位长度相等，并贴紧数据范围
+size_figure_to_data(ar);     % 按数据宽高比设定窗口尺寸
 xlabel('X / km'); ylabel('Y / km');
 title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
 
@@ -73,8 +76,8 @@ cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
 contourf(Xg_km,Yg_km,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
 colormap(gca,cmap); caxis([0.5 4.5]);
 cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
-axis equal tight;       % X/Y 单位长度相等，并贴紧数据范围
-pbaspect([1 1 1]);      % 强制绘图区为正方形（短轴方向自动留白居中）
+axis equal tight;            % X/Y 单位长度相等，并贴紧数据范围
+size_figure_to_data(ar);     % 按数据宽高比设定窗口尺寸
 xlabel('X / km'); ylabel('Y / km');
 title([cfg.name '赋分图（等级）']);
 
@@ -169,4 +172,15 @@ grade = 3*ones(size(score));
 grade(score<0.40)=4;
 grade(score>=0.65)=2;
 grade(score>=0.85)=1;
+end
+
+function size_figure_to_data(ar)
+% 按数据宽/高比 ar 设定当前图形窗口尺寸。
+% 配合 axis equal（X/Y 单位长度相等）使用：窗口整体比例贴近数据本身，
+% 使整图既不拉伸、也不留下大片空白。颜色条与坐标标签占位已预留。
+axH = 420;                        % 绘图区基准高度（像素）
+axW = min(round(axH*ar), 1600);   % 绘图区宽度，按数据宽高比并设上限防过宽
+figW = axW + 130;                 % 窗口宽度：右侧颜色条与边距
+figH = axH + 120;                 % 窗口高度：顶部标题与底部坐标标签
+set(gcf, 'Units', 'pixels', 'Position', [60 60 figW figH]);
 end
