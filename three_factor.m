@@ -53,15 +53,15 @@ value = Zg(valid); Xv = Xg(valid); Yv = Yg(valid);
 score = interp1(cfg.edges, cfg.scores, value, 'linear', 'extrap');
 score = max(0.25, min(1.00, score));
 grade = to_grade(score);
-grade_map = nan(size(Zg)); grade_map(valid) = grade;
+score_map = nan(size(Zg)); score_map(valid) = score;   % 连续赋分值（0.25~1.0）
 fprintf('赋分范围     : %.3f ~ %.3f\n', min(score), max(score));
 
 % TOC、Ro：插值图+赋分图+概率分布+等级占比 四合一界面，导出 JPG；
 % 厚度：保持插值图、赋分图、概率统计图三个独立图。
 if ismember(cfg.name, {'TOC','Ro'})
-    plot_combined_export(cfg, Xg, Yg, Zg, grade_map, score, grade);
+    plot_combined_export(cfg, Xg, Yg, Zg, score_map, score, grade);
 else
-    plot_separate(cfg, Xg, Yg, Zg, grade_map, score, grade);
+    plot_separate(cfg, Xg, Yg, Zg, score_map, score, grade);
 end
 
 fprintf('\n=== %s 得分统计（%d 个样本） ===\n',cfg.name,numel(score));
@@ -80,7 +80,7 @@ fprintf('  等级占比: 优 %.1f%%   较好 %.1f%%   一般 %.1f%%   差 %.1f%%
 %fprintf('已导出 %s（%d 个节点）\n',outfile,height(T_out));
 end
 
-function plot_separate(cfg, Xg, Yg, Zg, grade_map, score, grade)
+function plot_separate(cfg, Xg, Yg, Zg, score_map, score, grade)
 % 厚度等：插值图、赋分图、概率统计图三个独立图形
 figure('Name',[cfg.name '插值图'],'Color','w');
 contourf(Xg,Yg,Zg,30,'LineStyle','none');
@@ -93,23 +93,23 @@ xlabel('X / m'); ylabel('Y / m');
 title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
 
 figure('Name',[cfg.name '赋分图'],'Color','w');
-cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
-contourf(Xg,Yg,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
-colormap(gca,cmap); caxis([0.5 4.5]);
-cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
+mapColors = red_yellow_blue(256);
+contourf(Xg,Yg,score_map,30,'LineStyle','none');
+colormap(gca, mapColors);
+colorbar;
 axis tight;              % 贴紧数据范围
 pbaspect([1 1 1]);       % 强制正方形绘图区
 set(gcf,'Units','pixels','Position',[60 60 680 640]);  % 正方形窗口
 ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;   % 横纵坐标科学计数法 ×10³
 xlabel('X / m'); ylabel('Y / m');
-title([cfg.name '赋分图（等级）']);
+title([cfg.name '赋分图']);
 
 figure('Name',[cfg.name '概率统计图'],'Color','w');
 subplot(1,2,1); plot_prob_cdf(score, cfg);
 subplot(1,2,2); plot_grade_prop(grade, cfg);
 end
 
-function plot_combined_export(cfg, Xg, Yg, Zg, grade_map, score, grade)
+function plot_combined_export(cfg, Xg, Yg, Zg, score_map, score, grade)
 % TOC、Ro：插值图+赋分图+概率分布+等级占比 2×2 合一界面，并导出 JPG
 figure('Name',[cfg.name '综合评价图'],'Color','w', ...
     'Units','pixels','Position',[40 40 1400 800]);
@@ -123,14 +123,14 @@ xlabel('X / m'); ylabel('Y / m');
 title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
 
 subplot(2,2,2);          % 赋分图
-cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
-contourf(Xg,Yg,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
-colormap(gca,cmap); caxis([0.5 4.5]);
-cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
+mapColors = red_yellow_blue(256);
+contourf(Xg,Yg,score_map,30,'LineStyle','none');
+colormap(gca, mapColors);
+colorbar;
 axis tight; pbaspect([1 1 1]);
 ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;
 xlabel('X / m'); ylabel('Y / m');
-title([cfg.name '赋分图（等级）']);
+title([cfg.name '赋分图']);
 
 subplot(2,2,3); plot_prob_cdf(score, cfg);      % 概率分布 + 累计概率
 subplot(2,2,4); plot_grade_prop(grade, cfg);    % 等级占比
@@ -219,4 +219,13 @@ grade = 3*ones(size(score));
 grade(score<0.40)=4;
 grade(score>=0.65)=2;
 grade(score>=0.85)=1;
+end
+
+function map = red_yellow_blue(n)
+% 红-黄-蓝渐变：低值→蓝，中间→黄，高值→红
+if nargin < 1, n = 256; end
+t = linspace(0, 1, n)';
+map = [interp1([0 0.5 1], [0 1 1], t), ...
+       interp1([0 0.5 1], [0 1 0], t), ...
+       interp1([0 0.5 1], [1 0 0], t)];
 end
