@@ -53,54 +53,16 @@ value = Zg(valid); Xv = Xg(valid); Yv = Yg(valid);
 score = interp1(cfg.edges, cfg.scores, value, 'linear', 'extrap');
 score = max(0.25, min(1.00, score));
 grade = to_grade(score);
+grade_map = nan(size(Zg)); grade_map(valid) = grade;
 fprintf('赋分范围     : %.3f ~ %.3f\n', min(score), max(score));
 
-figure('Name',[cfg.name '插值图'],'Color','w');
-contourf(Xg,Yg,Zg,30,'LineStyle','none');
-colorbar; colormap(gca,parula);
-axis tight;              % 贴紧数据范围
-pbaspect([1 1 1]);       % 强制正方形绘图区（Y 轴相应拉长，X/Y 单位长度不再相等）
-set(gcf,'Units','pixels','Position',[60 60 680 640]);  % 正方形窗口
-ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;   % 横纵坐标科学计数法 ×10³
-xlabel('X / m'); ylabel('Y / m');
-title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
-
-grade_map = nan(size(Zg)); grade_map(valid) = grade;
-figure('Name',[cfg.name '赋分图'],'Color','w');
-cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
-contourf(Xg,Yg,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
-colormap(gca,cmap); caxis([0.5 4.5]);
-cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
-axis tight;              % 贴紧数据范围
-pbaspect([1 1 1]);       % 强制正方形绘图区（Y 轴相应拉长，X/Y 单位长度不再相等）
-set(gcf,'Units','pixels','Position',[60 60 680 640]);  % 正方形窗口
-ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;   % 横纵坐标科学计数法 ×10³
-xlabel('X / m'); ylabel('Y / m');
-title([cfg.name '赋分图（等级）']);
-
-figure('Name',[cfg.name '概率统计图'],'Color','w');
-subplot(1,2,1);
-yyaxis left;
-h_hist = histogram(score,30,'Normalization','probability', ...
-    'FaceColor',[0.4 0.6 0.9],'EdgeColor','none');
-hold on; yl = ylim;
-h_mean = plot([mean(score) mean(score)],yl,'r--','LineWidth',1.5);
-h_median = plot([median(score) median(score)],yl,'g--','LineWidth',1.5);
-ylabel('概率');
-yyaxis right;
-score_sorted = sort(score);
-cum_prob = (1:numel(score_sorted))'/numel(score_sorted);
-h_cdf = plot(score_sorted,cum_prob,'b-','LineWidth',1.8);
-ylabel('累计概率'); ylim([0 1]); xlabel('得分'); grid on; hold off;
-title([cfg.name '得分概率分布与累计概率曲线']);
-legend([h_hist h_mean h_median h_cdf], ...
-    {'得分概率','均值','中位数','累计概率'},'Location','best');
-
-subplot(1,2,2);
-gc = histcounts(grade,0.5:1:4.5);
-bar(1:4,gc/sum(gc),'FaceColor',[0.2 0.6 0.3]);
-set(gca,'XTick',1:4,'XTickLabel',{'优','较好','一般','差'});
-ylabel('占比'); ylim([0 1]); grid on; title([cfg.name '等级占比']);
+% TOC、Ro：插值图+赋分图+概率分布+等级占比 四合一界面，导出 JPG；
+% 厚度：保持插值图、赋分图、概率统计图三个独立图。
+if ismember(cfg.name, {'TOC','Ro'})
+    plot_combined_export(cfg, Xg, Yg, Zg, grade_map, score, grade);
+else
+    plot_separate(cfg, Xg, Yg, Zg, grade_map, score, grade);
+end
 
 fprintf('\n=== %s 得分统计（%d 个样本） ===\n',cfg.name,numel(score));
 fprintf('  均值 = %.3f   中位数 = %.3f   标准差 = %.3f\n', ...
@@ -116,6 +78,94 @@ fprintf('  等级占比: 优 %.1f%%   较好 %.1f%%   一般 %.1f%%   差 %.1f%%
 %outfile = [cfg.name '单因素评价结果.xlsx'];
 %writetable(T_out,outfile);
 %fprintf('已导出 %s（%d 个节点）\n',outfile,height(T_out));
+end
+
+function plot_separate(cfg, Xg, Yg, Zg, grade_map, score, grade)
+% 厚度等：插值图、赋分图、概率统计图三个独立图形
+figure('Name',[cfg.name '插值图'],'Color','w');
+contourf(Xg,Yg,Zg,30,'LineStyle','none');
+colorbar; colormap(gca,parula);
+axis tight;              % 贴紧数据范围
+pbaspect([1 1 1]);       % 强制正方形绘图区
+set(gcf,'Units','pixels','Position',[60 60 680 640]);  % 正方形窗口
+ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;   % 横纵坐标科学计数法 ×10³
+xlabel('X / m'); ylabel('Y / m');
+title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
+
+figure('Name',[cfg.name '赋分图'],'Color','w');
+cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
+contourf(Xg,Yg,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
+colormap(gca,cmap); caxis([0.5 4.5]);
+cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
+axis tight;              % 贴紧数据范围
+pbaspect([1 1 1]);       % 强制正方形绘图区
+set(gcf,'Units','pixels','Position',[60 60 680 640]);  % 正方形窗口
+ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;   % 横纵坐标科学计数法 ×10³
+xlabel('X / m'); ylabel('Y / m');
+title([cfg.name '赋分图（等级）']);
+
+figure('Name',[cfg.name '概率统计图'],'Color','w');
+subplot(1,2,1); plot_prob_cdf(score, cfg);
+subplot(1,2,2); plot_grade_prop(grade, cfg);
+end
+
+function plot_combined_export(cfg, Xg, Yg, Zg, grade_map, score, grade)
+% TOC、Ro：插值图+赋分图+概率分布+等级占比 2×2 合一界面，并导出 JPG
+figure('Name',[cfg.name '综合评价图'],'Color','w', ...
+    'Units','pixels','Position',[40 40 1400 800]);
+
+subplot(2,2,1);          % 插值图
+contourf(Xg,Yg,Zg,30,'LineStyle','none');
+colorbar; colormap(gca,parula);
+axis tight; pbaspect([1 1 1]);
+ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;
+xlabel('X / m'); ylabel('Y / m');
+title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
+
+subplot(2,2,2);          % 赋分图
+cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
+contourf(Xg,Yg,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
+colormap(gca,cmap); caxis([0.5 4.5]);
+cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
+axis tight; pbaspect([1 1 1]);
+ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;
+xlabel('X / m'); ylabel('Y / m');
+title([cfg.name '赋分图（等级）']);
+
+subplot(2,2,3); plot_prob_cdf(score, cfg);      % 概率分布 + 累计概率
+subplot(2,2,4); plot_grade_prop(grade, cfg);    % 等级占比
+
+outfile = [cfg.name '单因素评价图.jpg'];
+saveas(gcf, outfile);
+fprintf('已导出 %s\n', outfile);
+end
+
+function plot_prob_cdf(score, cfg)
+% 得分概率分布 + 累计概率曲线（百分比形式），绘制在当前坐标区
+yyaxis left;
+h_hist = histogram(score,30,'Normalization','probability', ...
+    'FaceColor',[0.4 0.6 0.9],'EdgeColor','none');
+hold on; yl = ylim;
+h_mean = plot([mean(score) mean(score)],yl,'r--','LineWidth',1.5);
+h_median = plot([median(score) median(score)],yl,'g--','LineWidth',1.5);
+ylabel('概率 (%)');
+yticklabels(compose('%.3g', 100*yticks));   % 概率刻度以百分比显示
+yyaxis right;
+score_sorted = sort(score);
+cum_prob = 100*(1:numel(score_sorted))'/numel(score_sorted);
+h_cdf = plot(score_sorted,cum_prob,'b-','LineWidth',1.8);
+ylabel('累计概率 (%)'); ylim([0 100]); xlabel('得分'); grid on; hold off;
+title([cfg.name '得分概率分布与累计概率曲线']);
+legend([h_hist h_mean h_median h_cdf], ...
+    {'得分概率','均值','中位数','累计概率'},'Location','best');
+end
+
+function plot_grade_prop(grade, cfg)
+% 等级占比柱状图（百分比形式），绘制在当前坐标区
+gc = histcounts(grade,0.5:1:4.5);
+bar(1:4,100*gc/sum(gc),'FaceColor',[0.2 0.6 0.3]);
+set(gca,'XTick',1:4,'XTickLabel',{'优','较好','一般','差'});
+ylabel('占比 (%)'); ylim([0 100]); grid on; title([cfg.name '等级占比']);
 end
 
 function [X,Y,Z] = read_contour_file(filename)
