@@ -48,10 +48,6 @@ mx = mean(X); my = mean(Y);
 F = scatteredInterpolant(X-mx, Y-my, Z, 'natural', 'none');
 Zg = F(Xg-mx, Yg-my);
 
-x_km = xg/1000;
-y_km = yg/1000;
-[Xg_km, Yg_km] = meshgrid(x_km, y_km);
-
 valid = ~isnan(Zg(:));
 value = Zg(valid); Xv = Xg(valid); Yv = Yg(valid);
 score = interp1(cfg.edges, cfg.scores, value, 'linear', 'extrap');
@@ -60,24 +56,26 @@ grade = to_grade(score);
 fprintf('赋分范围     : %.3f ~ %.3f\n', min(score), max(score));
 
 figure('Name',[cfg.name '插值图'],'Color','w');
-contourf(Xg_km,Yg_km,Zg,30,'LineStyle','none');
+contourf(Xg,Yg,Zg,30,'LineStyle','none');
 colorbar; colormap(gca,parula);
 axis tight;              % 贴紧数据范围
 pbaspect([1 1 1]);       % 强制正方形绘图区（Y 轴相应拉长，X/Y 单位长度不再相等）
 set(gcf,'Units','pixels','Position',[60 60 680 640]);  % 正方形窗口
-xlabel('X / km'); ylabel('Y / km');
+ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;   % 横纵坐标科学计数法 ×10³
+xlabel('X / m'); ylabel('Y / m');
 title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
 
 grade_map = nan(size(Zg)); grade_map(valid) = grade;
 figure('Name',[cfg.name '赋分图'],'Color','w');
 cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
-contourf(Xg_km,Yg_km,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
+contourf(Xg,Yg,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
 colormap(gca,cmap); caxis([0.5 4.5]);
 cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
 axis tight;              % 贴紧数据范围
 pbaspect([1 1 1]);       % 强制正方形绘图区（Y 轴相应拉长，X/Y 单位长度不再相等）
 set(gcf,'Units','pixels','Position',[60 60 680 640]);  % 正方形窗口
-xlabel('X / km'); ylabel('Y / km');
+ax = gca; ax.XAxis.Exponent = 3; ax.YAxis.Exponent = 3;   % 横纵坐标科学计数法 ×10³
+xlabel('X / m'); ylabel('Y / m');
 title([cfg.name '赋分图（等级）']);
 
 figure('Name',[cfg.name '概率统计图'],'Color','w');
