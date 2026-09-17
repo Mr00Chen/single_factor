@@ -61,7 +61,9 @@ fprintf('赋分范围     : %.3f ~ %.3f\n', min(score), max(score));
 
 figure('Name',[cfg.name '插值图'],'Color','w');
 contourf(Xg_km,Yg_km,Zg,30,'LineStyle','none');
-colorbar; colormap(gca,parula); axis equal tight;
+colorbar; colormap(gca,parula);
+axis equal tight;       % X/Y 单位长度相等，并贴紧数据范围
+pbaspect([1 1 1]);      % 强制绘图区为正方形（短轴方向自动留白居中）
 xlabel('X / km'); ylabel('Y / km');
 title(sprintf('%s插值图 (%s)',cfg.name,cfg.unit));
 
@@ -71,7 +73,9 @@ cmap = [0.13 0.55 0.13; 0.56 0.93 0.56; 0.95 0.87 0.35; 0.85 0.20 0.20];
 contourf(Xg_km,Yg_km,grade_map,[0.5 1.5 2.5 3.5 4.5],'LineStyle','none');
 colormap(gca,cmap); caxis([0.5 4.5]);
 cb = colorbar; set(cb,'Ticks',1:4,'TickLabels',{'优','较好','一般','差'});
-axis equal tight; xlabel('X / km'); ylabel('Y / km');
+axis equal tight;       % X/Y 单位长度相等，并贴紧数据范围
+pbaspect([1 1 1]);      % 强制绘图区为正方形（短轴方向自动留白居中）
+xlabel('X / km'); ylabel('Y / km');
 title([cfg.name '赋分图（等级）']);
 
 figure('Name',[cfg.name '概率统计图'],'Color','w');
